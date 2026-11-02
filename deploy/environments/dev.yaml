@@ -1,0 +1,84 @@
+# NovaBank account in the "dev" environment (Cloud Run, Knative service YAML).
+# Deployed by cloudbuild.yaml with:  gcloud run services replace deploy/environments/dev.yaml
+# ${PROJECT_ID}, ${PROJECT_NUMBER}, ${REGION} and ${IMAGE} are filled in at deploy time.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: novabank-account-dev
+  labels:
+    app: novabank
+    env: dev
+    component: account
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      labels:
+        app: novabank
+        env: dev
+        component: account
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "2"
+        run.googleapis.com/startup-cpu-boost: "true"
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/network-interfaces: '[{"network":"novabank-vpc","subnetwork":"novabank-dev-subnet"}]'
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: novabank-run-dev@${PROJECT_ID}.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 60
+      containers:
+        - name: account
+          image: ${IMAGE}
+          ports:
+            - name: http1
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "dev"
+            - name: DB_HOST
+              value: "10.10.0.10"
+            - name: DB_PORT
+              value: "50000"
+            - name: DB_NAME
+              value: "NOVABANK"
+            - name: DB_USER
+              value: "db2inst1"
+            - name: DB_POOL_SIZE
+              value: "5"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: novabank-dev-db-password
+                  key: latest
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: novabank-dev-jwt-secret
+                  key: latest
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: novabank-dev-internal-api-key
+                  key: latest
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 30
+            timeoutSeconds: 3

@@ -1,0 +1,8 @@
+target/
+.idea/*
+!.idea/runConfigurations/
+*.iml
+*.log
+.DS_Store
+.env
+.claude/settings.local.json

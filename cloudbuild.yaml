@@ -1,0 +1,47 @@
+# Build, test and deploy novabank-account-service to Cloud Run.
+#
+#   Deploy to dev:      gcloud builds submit --config cloudbuild.yaml --substitutions=_ENV=dev
+#   Deploy to preprod:  gcloud builds submit --config cloudbuild.yaml --substitutions=_ENV=preprod
+#
+# Triggers (created by novabank-platform/gcp/create-triggers.sh): push to "develop"
+# deploys dev, push to "release/*" deploys preprod.
+substitutions:
+  _ENV: dev
+  _REGION: us-central1
+  _AR_REPO: novabank
+  _SERVICE: account
+  _IMAGE: ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/novabank-account-service
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+
+steps:
+  - id: test
+    name: maven:3.9-eclipse-temurin-21
+    entrypoint: mvn
+    args: ["-B", "-q", "verify"]
+
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args: ["build", "-t", "${_IMAGE}:${BUILD_ID}", "-t", "${_IMAGE}:${_ENV}-latest", "."]
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args: ["push", "--all-tags", "${_IMAGE}"]
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -ceu
+      - |
+        sed -e "s|\$${PROJECT_ID}|${PROJECT_ID}|g" \
+            -e "s|\$${PROJECT_NUMBER}|${PROJECT_NUMBER}|g" \
+            -e "s|\$${REGION}|${_REGION}|g" \
+            -e "s|\$${IMAGE}|${_IMAGE}:${BUILD_ID}|g" \
+            deploy/environments/${_ENV}.yaml > /workspace/service.yaml
+        gcloud run services replace /workspace/service.yaml --region "${_REGION}" --quiet
+        gcloud run services add-iam-policy-binding "novabank-${_SERVICE}-${_ENV}" \
+            --region "${_REGION}" --member=allUsers --role=roles/run.invoker --quiet >/dev/null
+        echo "Deployed novabank-${_SERVICE}-${_ENV}"

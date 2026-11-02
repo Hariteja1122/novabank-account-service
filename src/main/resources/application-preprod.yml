@@ -1,0 +1,21 @@
+# GCP "preprod" environment. Production-like: no Swagger UI, INFO logging, bigger pool.
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: INFO
+    com.novabank: INFO

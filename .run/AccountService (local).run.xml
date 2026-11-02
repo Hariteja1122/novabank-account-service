@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Account Service (local)" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.novabank.account.AccountServiceApplication" />
+    <module name="account-service" />
+    <option name="VM_PARAMETERS" value="-Dspring.profiles.active=local -Duser.timezone=UTC" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

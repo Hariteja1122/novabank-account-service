@@ -1,0 +1,14 @@
+# GCP "dev" environment (Cloud Run). Every value without a default is injected by
+# novabank-platform/gcp/environments/dev/account-service.yaml from Secret Manager.
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:5}
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.novabank: DEBUG

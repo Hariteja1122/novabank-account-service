@@ -1,0 +1,8 @@
+target
+.idea
+*.iml
+.git
+.github
+.run
+deploy
+*.md

@@ -1,0 +1,22 @@
+# Local laptop / IntelliJ / Docker Compose. Matches novabank-platform/docker-compose.yml.
+spring:
+  datasource:
+    url: jdbc:db2://${DB_HOST:localhost}:${DB_PORT:50000}/${DB_NAME:NOVABANK}:retrieveMessagesFromServerOnGetMessage=true;
+    username: ${DB_USER:db2inst1}
+    password: ${DB_PASSWORD:NovaBank2026}
+  jpa:
+    show-sql: false
+
+novabank:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:local-dev-secret-change-me-0123456789abcdef}
+    internal-api-key: ${INTERNAL_API_KEY:local-internal-key}
+
+springdoc:
+  swagger-ui:
+    enabled: true
+
+logging:
+  level:
+    com.novabank: DEBUG
