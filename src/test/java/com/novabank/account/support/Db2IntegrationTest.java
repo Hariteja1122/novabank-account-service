@@ -66,5 +66,7 @@ public abstract class Db2IntegrationTest {
         // Enough connections for the concurrency tests to contend on row locks, not on the pool.
         registry.add("spring.datasource.hikari.maximum-pool-size", () -> "20");
         registry.add("novabank.security.internal-api-key", () -> INTERNAL_API_KEY);
+        // No auth-service in these tests: audit events fail to send, are logged, and never affect the test.
+        registry.add("novabank.services.auth-url", () -> "http://localhost:1");
     }
 }

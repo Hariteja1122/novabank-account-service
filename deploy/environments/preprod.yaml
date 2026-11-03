@@ -42,6 +42,8 @@ spec:
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: "preprod"
+            - name: AUTH_SERVICE_URL
+              value: "https://novabank-auth-preprod-${PROJECT_NUMBER}.${REGION}.run.app"
             - name: DB_HOST
               value: "10.20.0.10"
             - name: DB_PORT
