@@ -36,6 +36,9 @@ novabank:
       secret: ${JWT_SECRET}
       issuer: novabank-auth
     internal-api-key: ${INTERNAL_API_KEY}
+  services:
+    # Audit events go to auth-service, which owns the central audit log (NB_AUTH.AUDIT_LOG).
+    auth-url: ${AUTH_SERVICE_URL}
 
 management:
   endpoints:

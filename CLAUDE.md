@@ -29,5 +29,7 @@ Docker Compose, GCP bootstrap, Postman collection). See ../novabank-platform/REA
 - Every POST/PUT/PATCH/DELETE handler under `/api` needs `@Audited` (`AuditCoverageTest` enforces it); GET handlers
   must not have it. Add facts with `Audit.target` / `Audit.detail` / `Audit.reason`, and never pass a password,
   hash, token or request body to them.
+- There is no local audit table. `AuditClient` sends each event to auth-service (`POST /internal/audit`,
+  `AUTH_SERVICE_URL`) on a background virtual thread. It must never throw or block the request.
 - Environments: `application-local.yml`, `application-dev.yml`, `application-preprod.yml`,
   and the Cloud Run definitions in `deploy/environments/`.
