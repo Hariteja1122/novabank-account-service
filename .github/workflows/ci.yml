@@ -8,14 +8,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: novabank-account-service
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: novabank-account-service
+      # The Db2 integration tests load the schema owned by novabank-platform,
+      # so check it out side by side, the same layout as on a laptop.
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/novabank-platform
+          path: novabank-platform
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
-      - name: Build and test
+          cache-dependency-path: novabank-account-service/pom.xml
+      - name: Build, unit and Db2 integration tests
         run: mvn -B verify
       - name: Build Docker image
         run: docker build -t novabank-account-service:ci .

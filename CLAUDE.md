@@ -6,7 +6,12 @@ novabank-transaction-service (Spring Boot 3.5, Java 21) and novabank-platform (D
 Docker Compose, GCP bootstrap, Postman collection). See ../novabank-platform/README.md.
 
 ## Commands
-- Build and test: `mvn verify`
+- Build and test: `mvn verify` (unit tests, then `*IT` Db2 integration tests via failsafe)
+- Unit tests only: `mvn test` or `mvn verify -DskipITs`. One test: `mvn test -Dtest=AccountServiceTest#method`
+- One integration test: `mvn verify -Dit.test=AccountTransferIT -Dtest=skip -Dsurefire.failIfNoSpecifiedTests=false`
+- Integration tests (`Db2IntegrationTest` subclasses) need Docker and the sibling `../novabank-platform`
+  checkout: they start `icr.io/db2_community/db2` with Testcontainers and load `db2/schema/*.sql`
+  (override the path with `-Dnovabank.schema.dir=`). First Db2 start takes several minutes.
 - Run locally: start Db2 with `../novabank-platform/dev.sh db`, then `mvn spring-boot:run`
   (profile `local` is the default) or the IntelliJ run configuration in `.run/`.
 - Whole stack: `../novabank-platform/dev.sh up`

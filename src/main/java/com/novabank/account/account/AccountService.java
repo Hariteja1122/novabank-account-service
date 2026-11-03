@@ -9,6 +9,9 @@ import com.novabank.account.account.AccountDtos.TransferRequest;
 import com.novabank.account.account.AccountDtos.TransferResult;
 import com.novabank.account.account.AccountDtos.TypeTotal;
 import com.novabank.account.common.ApiException;
+import com.novabank.account.ledger.LedgerEntry;
+import com.novabank.account.ledger.LedgerEntry.Outcome;
+import com.novabank.account.ledger.TransferLedger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AccountService {
@@ -26,10 +30,12 @@ public class AccountService {
 
     private final AccountRepository accounts;
     private final AccountNumberGenerator numbers;
+    private final TransferLedger ledger;
 
-    public AccountService(AccountRepository accounts, AccountNumberGenerator numbers) {
+    public AccountService(AccountRepository accounts, AccountNumberGenerator numbers, TransferLedger ledger) {
         this.accounts = accounts;
         this.numbers = numbers;
+        this.ledger = ledger;
     }
 
     @Transactional(readOnly = true)
@@ -82,12 +88,23 @@ public class AccountService {
     /**
      * Moves money between two accounts in one local Db2 transaction. Both rows are
      * locked in account number order, so two opposite transfers can never deadlock.
+     * The reference is recorded as APPLIED in the same transaction, so a retry never
+     * moves money twice and reconciliation can tell whether the money moved.
      */
     @Transactional
     public TransferResult transfer(TransferRequest req) {
         if (req.fromAccount().equals(req.toAccount())) {
             throw ApiException.badRequest("Source and destination accounts must be different");
         }
+        Optional<LedgerEntry> settled = ledger.find(req.reference());
+        if (settled.isPresent()) {
+            requireApplied(settled.get());
+            return new TransferResult(req.reference(),
+                    new BalanceChange(req.fromAccount(), find(req.fromAccount()).getBalance()),
+                    new BalanceChange(req.toAccount(), find(req.toAccount()).getBalance()));
+        }
+        // Claim the reference first. If a check below fails, the claim rolls back with it.
+        ledger.record(req.reference(), Outcome.APPLIED);
         boolean fromFirst = req.fromAccount().compareTo(req.toAccount()) < 0;
         Account first = lock(fromFirst ? req.fromAccount() : req.toAccount());
         Account second = lock(fromFirst ? req.toAccount() : req.fromAccount());
@@ -120,6 +137,12 @@ public class AccountService {
 
     @Transactional
     public BalanceChange deposit(DepositRequest req) {
+        Optional<LedgerEntry> settled = ledger.find(req.reference());
+        if (settled.isPresent()) {
+            requireApplied(settled.get());
+            return new BalanceChange(req.toAccount(), find(req.toAccount()).getBalance());
+        }
+        ledger.record(req.reference(), Outcome.APPLIED);
         Account to = lock(req.toAccount());
         if (!to.isActive()) {
             throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "Destination account is " + to.getStatus());
@@ -127,6 +150,18 @@ public class AccountService {
         to.credit(req.amount());
         log.info("Deposit {} credited {} to {}", req.reference(), req.amount(), to.getAccountNumber());
         return new BalanceChange(to.getAccountNumber(), to.getBalance());
+    }
+
+    /**
+     * Reconciliation: the final outcome for a reference. If the money never moved, the
+     * reference is voided so a late or retried request can no longer apply it.
+     */
+    @Transactional
+    public LedgerEntry voidUnlessApplied(String reference) {
+        return ledger.find(reference).orElseGet(() -> {
+            log.warn("Voiding reference {}: no balance change was ever applied for it", reference);
+            return ledger.record(reference, Outcome.VOIDED);
+        });
     }
 
     @Transactional(readOnly = true)
@@ -139,6 +174,13 @@ public class AccountService {
                 accounts.countByStatus(AccountStatus.FROZEN),
                 accounts.totalDeposits(),
                 byType);
+    }
+
+    private static void requireApplied(LedgerEntry entry) {
+        if (entry.getOutcome() == Outcome.VOIDED) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "Reference " + entry.getReference() + " was cancelled because it did not complete in time");
+        }
     }
 
     private Account find(String accountNumber) {

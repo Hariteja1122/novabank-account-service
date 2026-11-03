@@ -17,10 +17,12 @@ options:
   dynamicSubstitutions: true
 
 steps:
+  # Unit tests only: this step has no Docker daemon or novabank-platform checkout for the
+  # Testcontainers Db2 integration tests. GitHub Actions CI runs those on every push.
   - id: test
     name: maven:3.9-eclipse-temurin-21
     entrypoint: mvn
-    args: ["-B", "-q", "verify"]
+    args: ["-B", "-q", "verify", "-DskipITs"]
 
   - id: build
     name: gcr.io/cloud-builders/docker
