@@ -1,5 +1,6 @@
 package com.novabank.account.account;
 
+import com.novabank.account.audit.Audited;
 import com.novabank.account.account.AccountDtos.AccountDto;
 import com.novabank.account.account.AccountDtos.OpenAccountRequest;
 import com.novabank.account.account.AccountDtos.OpenOwnAccountRequest;
@@ -41,6 +42,7 @@ public class AccountController {
     }
 
     @PostMapping
+    @Audited(action = "ACCOUNT_OPEN", targetType = "ACCOUNT")
     @ResponseStatus(HttpStatus.CREATED)
     public AccountDto openOwn(@Valid @RequestBody OpenOwnAccountRequest req, @AuthenticationPrincipal Jwt jwt) {
         return service.open(new OpenAccountRequest(CurrentUser.id(jwt), jwt.getClaimAsString("name"),

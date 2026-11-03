@@ -1,5 +1,6 @@
 package com.novabank.account.admin;
 
+import com.novabank.account.audit.Audited;
 import com.novabank.account.account.AccountDtos.AccountDto;
 import com.novabank.account.account.AccountDtos.AccountSummary;
 import com.novabank.account.account.AccountDtos.OpenAccountRequest;
@@ -53,12 +54,14 @@ public class AdminAccountController {
     }
 
     @PostMapping
+    @Audited(action = "ACCOUNT_OPEN", targetType = "ACCOUNT")
     @ResponseStatus(HttpStatus.CREATED)
     public AccountDto open(@Valid @RequestBody OpenAccountRequest req) {
         return service.open(req);
     }
 
     @PatchMapping("/{accountNumber}/status")
+    @Audited(action = "ACCOUNT_STATUS_CHANGE", targetType = "ACCOUNT", targetParam = "accountNumber")
     public AccountDto changeStatus(@PathVariable String accountNumber, @Valid @RequestBody StatusRequest req) {
         return service.changeStatus(accountNumber, req.status());
     }
