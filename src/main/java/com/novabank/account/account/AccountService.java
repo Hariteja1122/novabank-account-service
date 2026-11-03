@@ -1,5 +1,6 @@
 package com.novabank.account.account;
 
+import com.novabank.account.audit.Audit;
 import com.novabank.account.account.AccountDtos.AccountDto;
 import com.novabank.account.account.AccountDtos.AccountSummary;
 import com.novabank.account.account.AccountDtos.BalanceChange;
@@ -67,6 +68,10 @@ public class AccountService {
         account.setStatus(AccountStatus.ACTIVE);
         account.setBalance(req.initialDeposit() == null ? BigDecimal.ZERO : req.initialDeposit());
         account = accounts.save(account);
+        Audit.target("ACCOUNT", account.getAccountNumber());
+        Audit.detail("customerId", req.customerId());
+        Audit.detail("accountType", req.accountType());
+        Audit.detail("initialDeposit", account.getBalance().toPlainString());
         log.info("Opened {} account {} for customer {}", req.accountType(), account.getAccountNumber(), req.customerId());
         return AccountDto.from(account);
     }
@@ -74,6 +79,8 @@ public class AccountService {
     @Transactional
     public AccountDto changeStatus(String accountNumber, AccountStatus status) {
         Account account = find(accountNumber);
+        Audit.detail("from", account.getStatus());
+        Audit.detail("to", status);
         if (account.getStatus() == AccountStatus.CLOSED) {
             throw ApiException.badRequest("Closed accounts cannot be changed");
         }

@@ -26,5 +26,8 @@ Docker Compose, GCP bootstrap, Postman collection). See ../novabank-platform/REA
 - Money is `BigDecimal` with scale 2. Never double.
 - Timestamps are `Instant` and the JVM runs in UTC.
 - Secrets come from environment variables. Never commit real values.
+- Every POST/PUT/PATCH/DELETE handler under `/api` needs `@Audited` (`AuditCoverageTest` enforces it); GET handlers
+  must not have it. Add facts with `Audit.target` / `Audit.detail` / `Audit.reason`, and never pass a password,
+  hash, token or request body to them.
 - Environments: `application-local.yml`, `application-dev.yml`, `application-preprod.yml`,
   and the Cloud Run definitions in `deploy/environments/`.
