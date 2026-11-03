@@ -1,5 +1,6 @@
 package com.novabank.account.account;
 
+import com.novabank.account.ledger.LedgerEntry;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
@@ -57,6 +58,13 @@ public final class AccountDtos {
     }
 
     public record TransferResult(String reference, BalanceChange from, BalanceChange to) {
+    }
+
+    public record LedgerEntryDto(String reference, LedgerEntry.Outcome outcome, Instant recordedAt) {
+
+        public static LedgerEntryDto from(LedgerEntry e) {
+            return new LedgerEntryDto(e.getReference(), e.getOutcome(), e.getRecordedAt());
+        }
     }
 
     public record TypeTotal(AccountType accountType, long count, BigDecimal balance) {
